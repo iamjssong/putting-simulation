@@ -1,6 +1,21 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
+    <link rel="icon" type="image/png" href="icon.png">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#2a9d8f">
+    <meta property="og:title" content="퍼팅 거리 시뮬레이터">
+    <meta property="og:description" content="여러 모델을 통해 퍼팅 거리를 계산해보세요. Google, MIT, Penner 등 다양한 시뮬레이션 제공.">
+    <meta property="og:image" content="og_image.png">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://iamjssong.github.io/putting-simulation/">
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+          navigator.serviceWorker.register('sw.js');
+        });
+      }
+    </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>퍼팅 거리 시뮬레이터 (모델별 파라미터)</title>
@@ -21,8 +36,8 @@
             border-radius: 16px;
             padding: 24px 32px;
             box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
-            width: 90%;
-            max-width: 480px;
+            width: 85%;
+            max-width: 360px;
         }
         .form-row {
             display: flex;
@@ -60,12 +75,17 @@
             background-color: #21867a;
         }
         #result {
-            margin-top: 24px;
-            padding-top: 8px;
-            border-top: 1px solid #ddd;
-            text-align: left;
-            line-height: 1.6;
-        }
+    margin-top: 32px;
+    padding: 16px 20px;
+    background-color: #f9f9f9;
+    border-radius: 12px;
+    border: 1px solid #ccc;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+    font-size: 15px;
+    color: #222;
+    line-height: 1.8;
+    transition: all 0.3s ease;
+}
     </style>
 </head>
 <body>
@@ -102,11 +122,11 @@
     </div>
     <div class="form-row">
         <label for="velocity">볼 속도 (m/s):</label>
-        <input type="number" id="velocity" step="0.1" placeholder="예: 3.5" />
+        <input type="number" id="velocity" step="0.1" value="3" />
     </div>
     <div class="form-row">
         <label for="angle">출발 각도 (도):</label>
-        <input type="number" id="angle" step="0.1" placeholder="예: 2" />
+        <input type="number" id="angle" step="0.1" value="0" />
     </div>
     <div class="form-row">
         <label for="greenspeed">그린 스피드:</label>
@@ -188,12 +208,12 @@ function calculateDistance() {
     }
 
     resultDiv.innerHTML = `
-        <div>
-            <strong>퍼팅 거리:</strong> ${distance.toFixed(2)} m<br>
-            <strong>좌우 거리:</strong> ${offset.toFixed(2)} m<br>
-            <strong>볼 속도:</strong> ${v0.toFixed(2)} m/s<br>
-            <strong>모델 타입:</strong> ${modelType.toUpperCase()}<br>
-        </div>`;
+        <table style="width: 100%; border-collapse: collapse;">
+    <tr><td>퍼팅 거리</td><td style="text-align: right;">${distance.toFixed(2)} m</td></tr>
+    <tr><td>좌우 거리</td><td style="text-align: right;">${offset.toFixed(2)} m</td></tr>
+    <tr><td>볼 속도</td><td style="text-align: right;">${v0.toFixed(2)} m/s</td></tr>
+    <tr><td>모델 타입</td><td style="text-align: right;">${modelType.toUpperCase()}</td></tr>
+</table>`;
 }
 
 function simulatePutting(initialVelocity, initialDirectionDegrees, greenSpeed, options = {}) {
