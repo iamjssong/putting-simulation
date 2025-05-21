@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>퍼팅 거리 시뮬레이터 (모델별 파라미터)</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #d0eafc, #f2f9ff);
+            color: #333;
+        }
+        .card {
+            background: #fff;
+            border-radius: 16px;
+            padding: 24px 32px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+            width: 90%;
+            max-width: 480px;
+        }
+        .form-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        .form-row label {
+            flex: 1;
+            margin-right: 10px;
+            font-size: 15px;
+            text-align: left;
+        }
+        .form-row input,
+        .form-row select,
+        .form-row input[type=range] {
+            flex: 2;
+            padding: 8px 12px;
+            font-size: 14px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: #2a9d8f;
+            color: #fff;
+            font-size: 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        button:hover {
+            background-color: #21867a;
+        }
+        #result {
+            margin-top: 24px;
+            padding-top: 8px;
+            border-top: 1px solid #ddd;
+            text-align: left;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+<h1>퍼팅 거리 시뮬레이터</h1>
+<div class="card">
+    <div class="form-row">
+        <label for="modelType">모델 선택:</label>
+        <select id="modelType" onchange="toggleModelOptions()"> 
+            <option value="google">Google 모델</option>
+            <option value="hybrid" selected>하이브리드 모델</option>
+            <option value="empirical">경험적 모델</option>
+            <option value="mit">MIT 모델</option>
+            <option value="penner">Penner 모델</option>
+        </select>
+    </div>
+    <div id="pennerOption" class="form-row" style="display:none;">
+        <label for="rhoG">Penner ρg 값:</label>
+        <input type="range" id="rhoG" min="0.1" max="0.2" step="0.001" value="0.131" oninput="document.getElementById('rhoGValue').innerText = this.value;">
+        <span id="rhoGValue">0.131</span>
+    </div>
+    <div id="googleOption" style="display:none;">
+        <div class="form-row">
+            <label for="googleFriction">Google 마찰 상수:</label>
+            <input type="number" id="googleFriction" value="0.5" step="0.01" />
+        </div>
+        <div class="form-row">
+            <label for="googleTimestep">Google 시간 간격 (s):</label>
+            <input type="number" id="googleTimestep" value="0.01" step="0.001" />
+        </div>
+        <div class="form-row">
+            <label for="googleSimTime">Google 최대 시뮬레이션 시간 (s):</label>
+            <input type="number" id="googleSimTime" value="10" step="0.1" />
+        </div>
+    </div>
+    <div class="form-row">
+        <label for="velocity">볼 속도 (m/s):</label>
+        <input type="number" id="velocity" step="0.1" placeholder="예: 3.5" />
+    </div>
+    <div class="form-row">
+        <label for="angle">출발 각도 (도):</label>
+        <input type="number" id="angle" step="0.1" placeholder="예: 2" />
+    </div>
+    <div class="form-row">
+        <label for="greenspeed">그린 스피드:</label>
+        <select id="greenspeed">
+            <option value="2.4">보통 (2.4 m/s)</option>
+            <option value="2.6">약간 빠름 (2.6 m/s)</option>
+            <option value="2.8" selected>빠름 (2.8 m/s)</option>
+            <option value="3.1">매우 빠름 (3.1 m/s)</option>
+        </select>
+    </div>
+    <button onclick="calculateDistance()">계산하기</button>
+    <div id="result"></div>
+</div>
+
+<script>
+function toggleModelOptions() {
+    const modelType = document.getElementById('modelType').value;
+    document.getElementById('pennerOption').style.display = (modelType === 'penner') ? 'flex' : 'none';
+    document.getElementById('googleOption').style.display = (modelType === 'google') ? 'block' : 'none';
+}
+
+function calculateDistance() {
+    const v0 = parseFloat(document.getElementById('velocity').value);
+    const stimp = parseFloat(document.getElementById('greenspeed').value);
+    let angleDeg = parseFloat(document.getElementById('angle').value);
+    if (isNaN(angleDeg)) angleDeg = 0;
+    const modelType = document.getElementById('modelType').value;
+    const resultDiv = document.getElementById('result');
+
+    if (isNaN(v0) || v0 <= 0) {
+        resultDiv.innerText = "볼 속도를 입력하세요!";
+        return;
+    }
+
+    const g = 9.81;
+    const mu_physics = 1 / (2 * g * stimp);
+    let mu_effective = mu_physics;
+    let distance, offset;
+
+    if (modelType === 'hybrid') {
+        const correctionFactor = 0.75;
+        mu_effective *= correctionFactor;
+        distance = (v0 * v0) / (2 * mu_effective * g);
+    } else if (modelType === 'empirical') {
+        let a, n;
+        if (v0 <= 3.6) {
+            a = 0.743;
+            n = 1.78;
+        } else {
+            a = 0.307;
+            n = 2.374;
+        }
+        distance = a * Math.pow(v0, n);
+    } else if (modelType === 'mit') {
+        const correctionFactorMIT = 0.85;
+        mu_effective *= correctionFactorMIT;
+        distance = (v0 * v0) / (2 * mu_effective * g);
+    } else if (modelType === 'penner') {
+        const rho_g = parseFloat(document.getElementById('rhoG').value);
+        const a_penner = (10 / 7) * rho_g * g;
+        distance = (v0 * v0) / (2 * a_penner);
+    } else if (modelType === 'google') {
+        const frictionConstant = parseFloat(document.getElementById("googleFriction").value);
+        const timeStep = parseFloat(document.getElementById("googleTimestep").value);
+        const maxSimulationTime = parseFloat(document.getElementById("googleSimTime").value);
+
+        const result = simulatePutting(v0, angleDeg, stimp, {
+            frictionConstant: frictionConstant,
+            timeStep: timeStep,
+            maxSimulationTime: maxSimulationTime
+        });
+        distance = result.finalDistance;
+        offset = result.lateralDeviation;
+    }
+
+    if (modelType !== 'google') {
+        const angleRad = angleDeg * (Math.PI / 180);
+        offset = distance * Math.sin(angleRad);
+    }
+
+    resultDiv.innerHTML = `
+        <div>
+            <strong>퍼팅 거리:</strong> ${distance.toFixed(2)} m<br>
+            <strong>좌우 거리:</strong> ${offset.toFixed(2)} m<br>
+            <strong>볼 속도:</strong> ${v0.toFixed(2)} m/s<br>
+            <strong>모델 타입:</strong> ${modelType.toUpperCase()}<br>
+        </div>`;
+}
+
+function simulatePutting(initialVelocity, initialDirectionDegrees, greenSpeed, options = {}) {
+    const initialDirectionRadians = initialDirectionDegrees * Math.PI / 180;
+    const gravity = 9.8;
+    const frictionConstant = options.frictionConstant !== undefined ? options.frictionConstant : 0.5;
+    const timeStep = options.timeStep !== undefined ? options.timeStep : 0.01;
+    const maxSimulationTime = options.maxSimulationTime !== undefined ? options.maxSimulationTime : 10;
+    const speedThreshold = 0.01;
+
+    let x = 0, y = 0;
+    let velocityX = initialVelocity * Math.cos(initialDirectionRadians);
+    let velocityY = initialVelocity * Math.sin(initialDirectionRadians);
+    let time = 0;
+
+    while (Math.sqrt(velocityX**2 + velocityY**2) > speedThreshold && time < maxSimulationTime) {
+        const speed = Math.sqrt(velocityX**2 + velocityY**2);
+        const accel = frictionConstant * gravity / greenSpeed;
+        const ax = -accel * (velocityX / speed);
+        const ay = -accel * (velocityY / speed);
+        velocityX += ax * timeStep;
+        velocityY += ay * timeStep;
+        x += velocityX * timeStep;
+        y += velocityY * timeStep;
+        time += timeStep;
+    }
+
+    return {
+        finalDistance: Math.sqrt(x**2 + y**2),
+        lateralDeviation: Math.abs(y)
+    };
+}
+</script>
+</body>
+</html>
